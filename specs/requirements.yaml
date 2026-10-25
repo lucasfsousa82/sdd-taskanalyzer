@@ -1,0 +1,70 @@
+# Requisitos do TaskAnalyzer em formato legível por máquina.
+# Derivado de specs/task_analyzer_spec.md (contrato SDD v1.1).
+projeto: sdd-taskanalyzer
+versao_especificacao: "1.1"
+
+ambiente:
+  python_minimo: "3.11"
+  bibliotecas_externas_autorizadas:
+    - pytest
+  persistencia_de_dados: false
+
+interface:
+  funcao_publica: analyze_tasks
+  parametros:
+    tasks: "list[dict]"
+    agora: "datetime | None (opcional; padrão = horário atual em UTC)"
+  excecao_publica: TaskValidationError
+
+entradas:
+  - campo: id_tarefa
+    tipo: int
+    obrigatorio: true
+    restricao: "inteiro maior que zero e único na lista"
+  - campo: data_criacao
+    tipo: datetime
+    obrigatorio: true
+    restricao: "com fuso horário (convertido para UTC)"
+  - campo: data_conclusao
+    tipo: datetime
+    obrigatorio: "apenas se status = concluído"
+    restricao: "não pode ser anterior a data_criacao"
+  - campo: prazo
+    tipo: datetime
+    obrigatorio: true
+    restricao: "com fuso horário"
+  - campo: prioridade
+    tipo: str
+    obrigatorio: true
+    valores: [baixa, média, alta]
+  - campo: status
+    tipo: str
+    obrigatorio: true
+    valores: [concluído, pendente, cancelado]
+
+saidas:
+  - total_tarefas
+  - total_concluidas
+  - total_pendentes
+  - tempo_medio_conclusao_horas
+  - taxa_atraso_percentual
+  - indicadores_por_prioridade
+
+regras_de_negocio:
+  - "O tempo médio considera apenas tarefas concluídas, em horas (data_conclusao - data_criacao)."
+  - "Atrasada: concluída com data_conclusao > prazo, ou pendente com agora > prazo."
+  - "Tarefas canceladas entram em total_tarefas, mas não na taxa de atraso."
+  - "Sem tarefas concluídas, o tempo médio é 0.0; sem tarefas ativas, a taxa de atraso é 0.0."
+  - "Entrada vazia retorna métricas zeradas, sem exceção."
+  - "Entradas inválidas disparam TaskValidationError com mensagem clara."
+
+cenarios_de_aceite:
+  - id: 1
+    nome: Sucesso
+    esperado: "Métricas corretas para um conjunto de tarefas válidas."
+  - id: 2
+    nome: Exceção
+    esperado: "TaskValidationError para datas inconsistentes e campos inválidos."
+  - id: 3
+    nome: Casos de borda
+    esperado: "Entrada vazia ou só com pendentes retorna 0.0 nas médias."
